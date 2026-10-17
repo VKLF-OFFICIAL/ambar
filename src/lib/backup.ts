@@ -1,0 +1,108 @@
+import type { JournalEntry, Pledge, Settings, Tracker } from '../store/types'
+import { TRACKER_KINDS } from '../data/trackerKinds'
+import { clampToNow } from './time'
+
+export const BACKUP_VERSION = 1
+
+export interface BackupData {
+  trackers: Tracker[]
+  journal: JournalEntry[]
+  pledges: Pledge[]
+  settings: Settings
+}
+
+export type ImportResult = { ok: true; data: BackupData; exportedAt?: string } | { ok: false; reason: 'parse' | 'shape' | 'version' }
+
+export function exportData(data: BackupData): string {
+  return JSON.stringify({ app: 'ambar', version: BACKUP_VERSION, exportedAt: new Date().toISOString(), data }, null, 2)
+}
+
+const isObj = (v: unknown): v is Record<string, unknown> => typeof v === 'object' && v !== null && !Array.isArray(v)
+const isStr = (v: unknown): v is string => typeof v === 'string'
+const isNum = (v: unknown): v is number => typeof v === 'number' && Number.isFinite(v)
+const isStrArr = (v: unknown): v is string[] => Array.isArray(v) && v.every(isStr)
+const optStr = (v: unknown) => v === undefined || isStr(v)
+const KINDS = new Set<string>(TRACKER_KINDS.map((k) => k.kind))
+const PIN_HASH = /^[0-9a-f]{32}:[0-9a-f]{64}$/
+
+function isTracker(v: unknown): v is Tracker {
+  return (
+    isObj(v) &&
+    isStr(v.id) &&
+    isStr(v.kind) &&
+    KINDS.has(v.kind) &&
+    optStr(v.customName) &&
+    optStr(v.redLine) &&
+    isStr(v.startDate) &&
+    Number.isFinite(Date.parse(v.startDate)) &&
+    isStr(v.createdAt) &&
+    Array.isArray(v.reasons) &&
+    v.reasons.every((r) => isObj(r) && isStr(r.id) && isStr(r.text) && optStr(r.emoji)) &&
+    Array.isArray(v.streakHistory) &&
+    v.streakHistory.every((s) => isObj(s) && isStr(s.start) && isStr(s.end) && isNum(s.durationMs)) &&
+    isStrArr(v.celebratedMilestones)
+  )
+}
+
+function isEntry(v: unknown): v is JournalEntry {
+  return (
+    isObj(v) &&
+    isStr(v.id) &&
+    isStr(v.trackerId) &&
+    isStr(v.at) &&
+    (v.source === 'checkin' || v.source === 'sos') &&
+    isNum(v.intensity) &&
+    isStrArr(v.emotions) &&
+    isStrArr(v.environments)
+  )
+}
+
+function isPledge(v: unknown): v is Pledge {
+  return isObj(v) && isStr(v.date)
+}
+
+function isSettings(v: unknown): v is Settings {
+  return (
+    isObj(v) &&
+    (v.theme === 'dark' || v.theme === 'light') &&
+    (v.locale === 'es' || v.locale === 'en') &&
+    isStr(v.country) &&
+    isStr(v.currency) &&
+    typeof v.reduceMotion === 'boolean' &&
+    typeof v.onboarded === 'boolean' &&
+    (v.pinHash === undefined || (isStr(v.pinHash) && PIN_HASH.test(v.pinHash))) &&
+    optStr(v.name) &&
+    optStr(v.activeTrackerId) &&
+    Array.isArray(v.customHelplines) &&
+    v.customHelplines.every((h) => isObj(h) && isStr(h.label) && isStr(h.phone))
+  )
+}
+
+export function parseImport(json: string): ImportResult {
+  let parsed: unknown
+  try {
+    parsed = JSON.parse(json)
+  } catch {
+    return { ok: false, reason: 'parse' }
+  }
+  if (!isObj(parsed) || parsed.app !== 'ambar' || !isObj(parsed.data)) return { ok: false, reason: 'shape' }
+  if (parsed.version !== BACKUP_VERSION) return { ok: false, reason: 'version' }
+  const d = parsed.data
+  if (
+    !Array.isArray(d.trackers) ||
+    !d.trackers.every(isTracker) ||
+    !Array.isArray(d.journal) ||
+    !d.journal.every(isEntry) ||
+    !Array.isArray(d.pledges) ||
+    !d.pledges.every(isPledge) ||
+    !isSettings(d.settings)
+  ) {
+    return { ok: false, reason: 'shape' }
+  }
+  const trackers = d.trackers.map((t) => ({ ...t, startDate: clampToNow(t.startDate) }))
+  return {
+    ok: true,
+    data: { trackers, journal: d.journal, pledges: d.pledges, settings: d.settings },
+    exportedAt: isStr(parsed.exportedAt) ? parsed.exportedAt : undefined,
+  }
+}
