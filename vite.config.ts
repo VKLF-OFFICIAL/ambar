@@ -23,6 +23,7 @@ export default defineConfig({
         short_name: 'Ambar',
         description: 'Acompañamiento privado para dejar una adicción. Todo se queda en tu dispositivo.',
         lang: 'es',
+        id: base,
         start_url: base,
         scope: base,
         display: 'standalone',

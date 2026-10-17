@@ -16,6 +16,7 @@ import { Chip } from './ui/Chip'
 import { Button } from './ui/Button'
 import { Field, Select, TextInput } from './ui/Field'
 import { PageHeader } from './ui/PageHeader'
+import { InstallCard } from './InstallCard'
 
 const CURRENCIES = ['EUR', 'USD', 'MXN', 'ARS', 'COP', 'CLP', 'GBP', 'CAD']
 
@@ -268,6 +269,8 @@ export function Settings() {
           {t('settings.storageWarning')}
         </div>
       )}
+
+      <InstallCard />
 
       <Section title={t('settings.appearance')}>
         <div className="flex gap-2">
