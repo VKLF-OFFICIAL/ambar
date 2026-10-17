@@ -404,6 +404,10 @@ export const es = {
     gotIt: 'Entendido',
   },
   install: {
+    bannerTitle: 'Instala Ambar en tu móvil',
+    bannerBody: 'Un toque y tendrás el modo calma siempre a mano.',
+    bannerButton: 'Instalar Ambar',
+    bannerLater: 'Ahora no',
     unsupportedTitle: 'Este navegador no permite instalar apps',
     unsupportedStep1: 'Este navegador no permite instalar apps web en el ordenador.',
     unsupportedStep2: 'Abre esta misma dirección en Chrome o Edge y pulsa de nuevo el botón: se instalará con un clic.',

@@ -61,3 +61,37 @@ export function browserSupportsInstall(ua: string, platform: Platform): boolean 
   if (platform !== 'desktop') return true
   return !/OPR\/|Opera|Firefox\//.test(ua)
 }
+
+/** Navegadores de Android que ofrecen el diálogo de instalación nativo. */
+export function androidNativeInstall(ua: string): boolean {
+  if (/Firefox\/|OPR\/|Opera|DuckDuckGo|; wv\)|FBAN|FBAV|Instagram|UCBrowser|YaBrowser/.test(ua)) return false
+  return /Chrome\//.test(ua)
+}
+
+export const INSTALL_PARAM = 'install'
+
+/** Enlace que abre la misma página en Chrome (Android) y pide instalarla al llegar. */
+export function chromeIntentUrl(href: string): string {
+  const url = new URL(href)
+  url.searchParams.set(INSTALL_PARAM, '1')
+  const target = url.toString()
+  const withoutScheme = target.replace(/^https?:\/\//, '')
+  return `intent://${withoutScheme}#Intent;scheme=https;package=com.android.chrome;S.browser_fallback_url=${encodeURIComponent(target)};end`
+}
+
+export function cameToInstall(): boolean {
+  return typeof location !== 'undefined' && new URLSearchParams(location.search).has(INSTALL_PARAM)
+}
+
+export function clearInstallParam(): void {
+  const url = new URL(location.href)
+  url.searchParams.delete(INSTALL_PARAM)
+  history.replaceState(history.state, '', url.pathname + url.search + url.hash)
+}
+
+/** Navegación aislada para poder probarla. */
+export const nav = {
+  open: (url: string): void => {
+    location.href = url
+  },
+}

@@ -1,7 +1,16 @@
 import { Check, Share, Smartphone } from 'lucide-react'
 import { useState } from 'react'
 import { useT } from '../hooks/useT'
-import { browserSupportsInstall, detectPlatform, promptInstall, useInstallStore, type Platform } from '../lib/install'
+import {
+  androidNativeInstall,
+  browserSupportsInstall,
+  chromeIntentUrl,
+  detectPlatform,
+  nav,
+  promptInstall,
+  useInstallStore,
+  type Platform,
+} from '../lib/install'
 import type { MessageKey } from '../i18n'
 import { Card } from './ui/Card'
 import { Button } from './ui/Button'
@@ -35,6 +44,11 @@ export function InstallCard() {
     if (deferred) {
       const accepted = await promptInstall()
       if (!accepted && !useInstallStore.getState().deferred) setGuideOpen(true)
+      return
+    }
+    // Android con un navegador que no instala (Firefox, Opera…): abrir Ambar en Chrome, que sí lo hace.
+    if (platform === 'android' && !androidNativeInstall(navigator.userAgent)) {
+      nav.open(chromeIntentUrl(location.href))
       return
     }
     setGuideOpen(true)

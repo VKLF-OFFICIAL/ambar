@@ -6,6 +6,7 @@ import './styles/theme.css'
 import './lib/install'
 import App from './App'
 import { ErrorBoundary } from './components/ErrorBoundary'
+import { InstallBanner } from './components/InstallBanner'
 
 const root = document.getElementById('root')
 if (root) {
@@ -13,6 +14,7 @@ if (root) {
     <StrictMode>
       <ErrorBoundary>
         <App />
+        <InstallBanner />
       </ErrorBoundary>
     </StrictMode>,
   )

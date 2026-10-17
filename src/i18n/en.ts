@@ -406,6 +406,10 @@ export const en: Messages = {
     gotIt: 'Got it',
   },
   install: {
+    bannerTitle: 'Install Ambar on your phone',
+    bannerBody: 'One tap and calm mode is always at hand.',
+    bannerButton: 'Install Ambar',
+    bannerLater: 'Not now',
     unsupportedTitle: "This browser can't install apps",
     unsupportedStep1: "This browser doesn't allow installing web apps on a computer.",
     unsupportedStep2: 'Open this same address in Chrome or Edge and tap the button again: it will install in one click.',
