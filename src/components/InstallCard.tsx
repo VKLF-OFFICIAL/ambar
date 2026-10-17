@@ -1,7 +1,7 @@
 import { Check, Share, Smartphone } from 'lucide-react'
 import { useState } from 'react'
 import { useT } from '../hooks/useT'
-import { detectPlatform, promptInstall, useInstallStore, type Platform } from '../lib/install'
+import { browserSupportsInstall, detectPlatform, promptInstall, useInstallStore, type Platform } from '../lib/install'
 import type { MessageKey } from '../i18n'
 import { Card } from './ui/Card'
 import { Button } from './ui/Button'
@@ -16,6 +16,11 @@ const GUIDES: Record<Platform, { title: MessageKey; steps: MessageKey[] }> = {
   desktop: { title: 'install.desktopTitle', steps: ['install.desktopStep1', 'install.desktopStep2', 'install.desktopStep3'] },
 }
 
+const UNSUPPORTED = {
+  title: 'install.unsupportedTitle',
+  steps: ['install.unsupportedStep1', 'install.unsupportedStep2', 'install.unsupportedStep3'],
+} satisfies { title: MessageKey; steps: MessageKey[] }
+
 /** Botón para añadir Ambar a la pantalla de inicio: diálogo nativo si existe, guía paso a paso si no (iOS). */
 export function InstallCard() {
   const { t } = useT()
@@ -23,7 +28,8 @@ export function InstallCard() {
   const installed = useInstallStore((s) => s.installed)
   const [guideOpen, setGuideOpen] = useState(false)
   const [platform] = useState(() => detectPlatform(navigator.userAgent, navigator.maxTouchPoints ?? 0))
-  const guide = GUIDES[platform]
+  const [supported] = useState(() => browserSupportsInstall(navigator.userAgent, platform))
+  const guide = supported ? GUIDES[platform] : UNSUPPORTED
 
   const onClick = async () => {
     if (deferred) {

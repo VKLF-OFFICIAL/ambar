@@ -55,3 +55,9 @@ function listen(): void {
 }
 
 listen()
+
+/** En el ordenador, Opera y Firefox no permiten instalar apps web. */
+export function browserSupportsInstall(ua: string, platform: Platform): boolean {
+  if (platform !== 'desktop') return true
+  return !/OPR\/|Opera|Firefox\//.test(ua)
+}

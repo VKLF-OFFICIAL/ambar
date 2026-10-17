@@ -404,6 +404,10 @@ export const es = {
     gotIt: 'Entendido',
   },
   install: {
+    unsupportedTitle: 'Este navegador no permite instalar apps',
+    unsupportedStep1: 'Este navegador no permite instalar apps web en el ordenador.',
+    unsupportedStep2: 'Abre esta misma dirección en Chrome o Edge y pulsa de nuevo el botón: se instalará con un clic.',
+    unsupportedStep3: 'O ábrela en tu móvil (Chrome en Android, Safari en iPhone) para tenerla en la pantalla de inicio.',
     title: 'Llévala en tu móvil',
     hint: 'Añádela a tu pantalla de inicio para abrir el modo calma en un toque, incluso sin conexión.',
     button: 'Añadir a la pantalla de inicio',

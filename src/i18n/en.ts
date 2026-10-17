@@ -406,6 +406,10 @@ export const en: Messages = {
     gotIt: 'Got it',
   },
   install: {
+    unsupportedTitle: "This browser can't install apps",
+    unsupportedStep1: "This browser doesn't allow installing web apps on a computer.",
+    unsupportedStep2: 'Open this same address in Chrome or Edge and tap the button again: it will install in one click.',
+    unsupportedStep3: 'Or open it on your phone (Chrome on Android, Safari on iPhone) to put it on your home screen.',
     title: 'Keep it on your phone',
     hint: 'Add it to your home screen to open calm mode in one tap, even offline.',
     button: 'Add to home screen',
