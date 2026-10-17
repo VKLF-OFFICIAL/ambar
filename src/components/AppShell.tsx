@@ -1,5 +1,6 @@
 import { Moon, Settings as SettingsIcon, Sun } from 'lucide-react'
-import type { ReactNode } from 'react'
+import { useState, type ReactNode } from 'react'
+import { AlertTriangle } from 'lucide-react'
 import { useT } from '../hooks/useT'
 import { useAddictionStore } from '../store/useAddictionStore'
 import { useUiStore } from '../store/useUiStore'
@@ -12,6 +13,8 @@ export function AppShell({ children }: { children: ReactNode }) {
   const updateSettings = useAddictionStore((s) => s.updateSettings)
   const tab = useUiStore((s) => s.tab)
   const setTab = useUiStore((s) => s.setTab)
+  const storageAvailable = useAddictionStore((s) => s.storageAvailable)
+  const [storageNoticeSeen, setStorageNoticeSeen] = useState(false)
 
   return (
     <div className="min-h-dvh">
@@ -40,6 +43,15 @@ export function AppShell({ children }: { children: ReactNode }) {
           </button>
         </div>
       </header>
+      {!storageAvailable && !storageNoticeSeen && tab !== 'settings' && (
+        <div role="alert" className="mx-auto mt-2 flex max-w-[440px] items-start gap-3 rounded-[18px] bg-accent/15 px-4 py-3 text-sm max-[480px]:mx-5">
+          <AlertTriangle size={17} className="mt-0.5 shrink-0 text-accent" />
+          <span className="flex-1">{t('settings.storageWarning')}</span>
+          <button type="button" onClick={() => setStorageNoticeSeen(true)} className="shrink-0 text-xs font-medium text-accent">
+            {t('extra.gotIt')}
+          </button>
+        </div>
+      )}
       <main className="pb-nav mx-auto max-w-[480px] px-5">{children}</main>
       {tab !== 'home' && <SosFab />}
       <BottomNav />

@@ -1,9 +1,11 @@
 import { Delete, Lock, Wind } from 'lucide-react'
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useT } from '../hooks/useT'
 import { useAddictionStore } from '../store/useAddictionStore'
 import { useUiStore } from '../store/useUiStore'
 import { verifyPin } from '../lib/pin'
+import { readPinGuard, recordPinFailure, resetPinGuard } from '../lib/pinGuard'
+import { useNow } from '../hooks/useNow'
 import { Button } from './ui/Button'
 import { Sheet } from './ui/Sheet'
 
@@ -20,6 +22,9 @@ export function LockScreen() {
   const [error, setError] = useState(false)
   const [forgotOpen, setForgotOpen] = useState(false)
   const [sure, setSure] = useState(false)
+  const [guard, setGuard] = useState(readPinGuard)
+  const now = useNow(1000)
+  const waitSec = Math.max(0, Math.ceil((guard.until - now) / 1000))
 
   const press = (d: string) => {
     setError(false)
@@ -27,13 +32,32 @@ export function LockScreen() {
   }
 
   const submit = async () => {
+    if (waitSec > 0 || pin.length < 4) return
     if (!pinHash || (await verifyPin(pin, pinHash))) {
+      resetPinGuard()
       unlock()
       return
     }
+    setGuard(recordPinFailure(Date.now()))
     setError(true)
     setPin('')
   }
+
+  // Teclado físico: cifras, borrar y Enter.
+  const submitRef = useRef(submit)
+  useEffect(() => {
+    submitRef.current = submit
+  })
+  useEffect(() => {
+    if (forgotOpen) return
+    const onKey = (e: KeyboardEvent) => {
+      if (/^\d$/.test(e.key)) press(e.key)
+      else if (e.key === 'Backspace') setPin((p) => p.slice(0, -1))
+      else if (e.key === 'Enter') void submitRef.current()
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [forgotOpen])
 
   const keyClass = 'h-16 w-16 rounded-full bg-surface text-2xl font-light transition hover:bg-surface-2 active:scale-95'
 
@@ -50,8 +74,11 @@ export function LockScreen() {
           <span key={i} className={`h-3.5 w-3.5 rounded-full transition ${i < pin.length ? 'bg-accent' : 'bg-surface-2'}`} />
         ))}
       </div>
+      <p className="sr-only" aria-live="polite">
+        {t('extra.digits', { n: pin.length })}
+      </p>
       <p role="alert" className="mt-4 min-h-5 text-center text-sm text-accent">
-        {error ? t('lock.wrong') : ''}
+        {waitSec > 0 ? t('extra.wait', { s: waitSec }) : error ? t('lock.wrong') : ''}
       </p>
 
       <div className="mt-4 grid grid-cols-3 gap-4">
@@ -69,7 +96,7 @@ export function LockScreen() {
         </button>
       </div>
 
-      <Button size="lg" className="mt-8 w-full max-w-xs" disabled={pin.length < 4} onClick={() => void submit()}>
+      <Button size="lg" className="mt-8 w-full max-w-xs" disabled={pin.length < 4 || waitSec > 0} onClick={() => void submit()}>
         {t('lock.unlock')}
       </Button>
 
@@ -91,6 +118,7 @@ export function LockScreen() {
           onClick={() => {
             if (!sure) return setSure(true)
             wipeAll()
+            resetPinGuard()
             unlock()
           }}
         >

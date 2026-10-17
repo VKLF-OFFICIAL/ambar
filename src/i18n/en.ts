@@ -400,4 +400,9 @@ export const en: Messages = {
     export: 'Export my data',
     reload: 'Try again',
   },
+  extra: {
+    digits: '{n} digits entered',
+    wait: 'Too many attempts. Wait {s} s before trying again.',
+    gotIt: 'Got it',
+  },
 }

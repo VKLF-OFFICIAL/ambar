@@ -114,11 +114,13 @@ export const useAddictionStore = create<AmbarState>()(
         },
 
         updateTracker: (id, patch) =>
-          mapTracker(id, (t) => ({
-            ...t,
-            ...patch,
-            ...(patch.startDate ? { startDate: clampToNow(patch.startDate) } : {}),
-          })),
+          mapTracker(id, (t) => {
+            if (!patch.startDate) return { ...t, ...patch }
+            // Si la racha ahora es más corta, los hitos que aún no tocan se volverán a celebrar.
+            const startDate = clampToNow(patch.startDate)
+            const reached = new Set(milestonesUpTo(getElapsed(startDate, Date.now()).totalMs).map((m) => m.id))
+            return { ...t, ...patch, startDate, celebratedMilestones: t.celebratedMilestones.filter((m) => reached.has(m)) }
+          }),
 
         removeTracker: (id) =>
           set((s) => {
@@ -218,6 +220,7 @@ export const useAddictionStore = create<AmbarState>()(
       name: 'ambar-store',
       version: 1,
       migrate: (persisted) => persisted as AmbarState,
+      merge: mergePersisted,
       storage: createJSONStorage(() =>
         createSafeStorage(() => {
           queueMicrotask(() => useAddictionStore.setState({ storageAvailable: false }))
@@ -230,4 +233,10 @@ export const useAddictionStore = create<AmbarState>()(
 
 export function selectActiveTracker(s: AmbarState): Tracker | undefined {
   return s.trackers.find((t) => t.id === s.settings.activeTrackerId) ?? s.trackers[0]
+}
+
+/** Mezcla lo guardado con el estado actual; los ajustes se completan con los valores por defecto. */
+export function mergePersisted(persisted: unknown, current: AmbarState): AmbarState {
+  const p = (persisted && typeof persisted === 'object' ? persisted : {}) as Partial<AmbarState>
+  return { ...current, ...p, settings: { ...current.settings, ...(p.settings ?? {}) } }
 }

@@ -5,6 +5,7 @@ import { useT } from '../hooks/useT'
 import { selectActiveTracker, useAddictionStore } from '../store/useAddictionStore'
 import { EMOTION_CHIPS, ENVIRONMENT_CHIPS } from '../data/chips'
 import { intensityKey, trackerLabel } from '../lib/labels'
+import { resolveEntryTime } from '../lib/time'
 import { kindInfo } from '../data/trackerKinds'
 import type { MessageKey } from '../i18n'
 import { Card, Label } from './ui/Card'
@@ -43,9 +44,7 @@ export function Journal() {
   const [confirmId, setConfirmId] = useState<string | null>(null)
 
   const save = () => {
-    const [h, m] = time.split(':').map(Number)
-    const at = new Date()
-    at.setHours(h ?? at.getHours(), m ?? at.getMinutes(), 0, 0)
+    const at = resolveEntryTime(time, Date.now())
     addEntry({
       trackerId: trackerId || active?.id || '',
       source: 'checkin',
@@ -54,7 +53,7 @@ export function Journal() {
       environments,
       overcame,
       note: note.trim() || undefined,
-      at: (at.getTime() > Date.now() ? new Date() : at).toISOString(),
+      at: at.toISOString(),
     })
     setIntensity(5)
     setEmotions([])

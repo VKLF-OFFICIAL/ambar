@@ -398,4 +398,9 @@ export const es = {
     export: 'Exportar mis datos',
     reload: 'Volver a intentarlo',
   },
+  extra: {
+    digits: '{n} dígitos introducidos',
+    wait: 'Demasiados intentos. Espera {s} s antes de volver a probar.',
+    gotIt: 'Entendido',
+  },
 } as const

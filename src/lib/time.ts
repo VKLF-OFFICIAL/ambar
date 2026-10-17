@@ -40,3 +40,12 @@ export function clampToNow(iso: string | undefined, nowMs = Date.now()): string 
   const ms = iso ? Date.parse(iso) : NaN
   return new Date(Number.isFinite(ms) ? Math.min(ms, nowMs) : nowMs).toISOString()
 }
+
+/** Hora "HH:MM" de hoy; si cae después de ahora, se entiende que fue ayer. */
+export function resolveEntryTime(hhmm: string, nowMs: number): Date {
+  const [h, m] = hhmm.split(':').map(Number)
+  const d = new Date(nowMs)
+  if (Number.isFinite(h) && Number.isFinite(m)) d.setHours(h as number, m as number, 0, 0)
+  if (d.getTime() > nowMs) d.setDate(d.getDate() - 1)
+  return d
+}
