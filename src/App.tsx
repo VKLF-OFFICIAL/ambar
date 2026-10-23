@@ -11,6 +11,7 @@ import { Reasons } from './components/Reasons'
 import { Progress } from './components/Progress/Progress'
 import { Settings } from './components/Settings'
 import { LockScreen } from './components/LockScreen'
+import { isEncrypted } from './lib/cryptoStorage'
 
 const LOCK_AFTER_MS = 5 * 60_000
 
@@ -40,10 +41,11 @@ export default function App() {
   const sosOpen = useUiStore((s) => s.sosOpen)
   const relapseFor = useUiStore((s) => s.relapseFor)
   const locked = useUiStore((s) => s.locked)
-  const hasPin = useAddictionStore((s) => !!s.settings.pinHash)
+  // Con datos cifrados, settings.pinHash no está en memoria hasta desbloquear: isEncrypted() lo detecta.
+  const hasPin = useAddictionStore((s) => !!s.settings.pinHash) || isEncrypted()
   // Bloqueo al arrancar si hay PIN (antes del primer render), y al volver tras 5 min o más en segundo plano.
   useState(() => {
-    if (useAddictionStore.getState().settings.pinHash) useUiStore.getState().lock()
+    if (isEncrypted() || useAddictionStore.getState().settings.pinHash) useUiStore.getState().lock()
     return true
   })
 
@@ -52,7 +54,7 @@ export default function App() {
     const onVisibility = () => {
       if (document.visibilityState === 'hidden') hiddenAt = Date.now()
       else if (hiddenAt !== null) {
-        if (Date.now() - hiddenAt >= LOCK_AFTER_MS && useAddictionStore.getState().settings.pinHash) useUiStore.getState().lock()
+        if (Date.now() - hiddenAt >= LOCK_AFTER_MS && (isEncrypted() || useAddictionStore.getState().settings.pinHash)) useUiStore.getState().lock()
         hiddenAt = null
       }
     }

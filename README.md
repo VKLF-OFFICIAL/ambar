@@ -7,7 +7,7 @@ Aplicación web (PWA) gratuita y privada para acompañar a quien quiere dejar un
 - **Diario rápido**: intensidad, emoción y entorno con unos toques; patrones de detonantes.
 - **Recaída compasiva**: reflexión guiada que conserva tu progreso total.
 - **Por qués y ahorro** de dinero y tiempo, **pacto diario**, **calendario** y **cómo se recupera tu cuerpo** (tabaco y alcohol).
-- **Privacidad total**: todo se guarda en `localStorage` del dispositivo; PIN opcional; copia de seguridad en JSON. Sin cuentas, sin servidor, sin analíticas.
+- **Privacidad total**: todo se guarda en `localStorage` del dispositivo; con PIN opcional los datos se **cifran en reposo** (AES-GCM con clave derivada del PIN por PBKDF2, que nunca se almacena); copia de seguridad en JSON. Sin cuentas, sin servidor, sin analíticas.
 - Español e inglés, modo oscuro por defecto y modo claro, accesible y funciona sin conexión.
 
 ## Desarrollo
