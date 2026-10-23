@@ -7,8 +7,64 @@ import { savings, streakStats } from '../lib/stats'
 import { formatHours, formatMoney } from '../lib/format'
 import { Card, Label } from './ui/Card'
 import { Button } from './ui/Button'
-import { Field, TextInput } from './ui/Field'
+import { Field, Textarea, TextInput } from './ui/Field'
 import { PageHeader } from './ui/PageHeader'
+
+function CrisisLetterCard() {
+  const { t } = useT()
+  const tracker = useAddictionStore(selectActiveTracker)
+  const updateTracker = useAddictionStore((s) => s.updateTracker)
+  const [text, setText] = useState('')
+  const [editing, setEditing] = useState(false)
+  if (!tracker) return null
+
+  const letter = tracker.crisisLetter?.trim()
+  const start = () => {
+    setText(tracker.crisisLetter ?? '')
+    setEditing(true)
+  }
+  const save = () => {
+    updateTracker(tracker.id, { crisisLetter: text.trim() || undefined })
+    setEditing(false)
+  }
+
+  return (
+    <section className="mt-10">
+      <h2 className="mb-1 font-serif text-xl">{t('reasons.letterTitle')}</h2>
+      <p className="mb-3 text-sm text-subtle">{t('reasons.letterHelp')}</p>
+      {editing ? (
+        <Card className="space-y-3">
+          <Textarea
+            value={text}
+            onChange={(e) => setText(e.target.value)}
+            placeholder={t('reasons.letterPlaceholder')}
+            maxLength={2000}
+            aria-label={t('reasons.letterTitle')}
+          />
+          <div className="flex gap-2">
+            <Button className="flex-1" onClick={save}>
+              {t('ui.save')}
+            </Button>
+            <Button variant="ghost" onClick={() => setEditing(false)}>
+              {t('ui.cancel')}
+            </Button>
+          </div>
+        </Card>
+      ) : letter ? (
+        <Card className="space-y-3">
+          <p className="whitespace-pre-wrap text-[15px] leading-relaxed">{letter}</p>
+          <Button variant="quiet" className="!px-1 text-sm" onClick={start}>
+            {t('reasons.letterEdit')}
+          </Button>
+        </Card>
+      ) : (
+        <Button variant="quiet" className="!px-1 text-sm" onClick={start}>
+          {t('reasons.letterAdd')}
+        </Button>
+      )}
+    </section>
+  )
+}
 
 function SavingsCard() {
   const { t, locale } = useT()
@@ -158,6 +214,7 @@ export function Reasons() {
         </Button>
       </form>
 
+      <CrisisLetterCard />
       <SavingsCard />
     </div>
   )

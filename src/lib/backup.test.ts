@@ -26,6 +26,12 @@ describe('sanitizeData', () => {
     expect(result.pledges).toEqual([{ date: '2026-01-01' }])
   })
 
+  it('keeps a tracker crisis letter', () => {
+    const t = makeTracker({ id: 'ok', crisisLetter: 'querido yo, aguanta' })
+    const result = sanitizeData({ trackers: [t] })
+    expect(result.trackers?.[0]?.crisisLetter).toBe('querido yo, aguanta')
+  })
+
   it('omits keys whose value is missing or not an array', () => {
     const result = sanitizeData({ trackers: 'not-an-array' })
     expect(result.trackers).toBeUndefined()

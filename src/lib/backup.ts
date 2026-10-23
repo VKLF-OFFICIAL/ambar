@@ -33,6 +33,7 @@ export function isTracker(v: unknown): v is Tracker {
     KINDS.has(v.kind) &&
     optStr(v.customName) &&
     optStr(v.redLine) &&
+    optStr(v.crisisLetter) &&
     isStr(v.startDate) &&
     Number.isFinite(Date.parse(v.startDate)) &&
     isStr(v.createdAt) &&

@@ -1,5 +1,5 @@
 import { AnimatePresence, motion } from 'framer-motion'
-import { Phone, X } from 'lucide-react'
+import { Mail, Phone, X } from 'lucide-react'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { useT } from '../hooks/useT'
 import { useNow } from '../hooks/useNow'
@@ -8,6 +8,7 @@ import { selectActiveTracker, useAddictionStore } from '../store/useAddictionSto
 import { useUiStore } from '../store/useUiStore'
 import { twoDigits } from '../lib/time'
 import { Button } from './ui/Button'
+import { Sheet } from './ui/Sheet'
 import { Breathing } from './sos/Breathing'
 import { Grounding } from './sos/Grounding'
 import { ReasonsStep } from './sos/ReasonsStep'
@@ -32,6 +33,9 @@ export function SosIntervention({ locked = false }: { locked?: boolean }) {
   const [start] = useState(() => Date.now())
   const [step, setStep] = useState<Step>('breathing')
   const [helpOpen, setHelpOpen] = useState(false)
+  const [letterOpen, setLetterOpen] = useState(false)
+  // La carta es personal: solo se muestra con la app desbloqueada (misma regla que los "por qués").
+  const letter = !locked ? tracker?.crisisLetter?.trim() : undefined
   const dialogRef = useRef<HTMLDivElement>(null)
   const elapsedSec = Math.max(0, Math.floor((now - start) / 1000))
 
@@ -138,6 +142,11 @@ export function SosIntervention({ locked = false }: { locked?: boolean }) {
                 <span key={s} className={`h-1.5 rounded-full transition-all ${i === stepIndex ? 'w-5 bg-accent' : 'w-1.5 bg-surface-2'}`} />
               ))}
             </div>
+            {letter && (
+              <Button variant="ghost" className="w-full" onClick={() => setLetterOpen(true)}>
+                <Mail size={16} /> {t('sos.readLetter')}
+              </Button>
+            )}
             <div className="flex gap-2">
               <Button variant="ghost" className="flex-1" onClick={() => setHelpOpen(true)}>
                 <Phone size={16} /> {t('sos.talk')}
@@ -150,6 +159,11 @@ export function SosIntervention({ locked = false }: { locked?: boolean }) {
         )}
       </div>
       <HelpSheet open={helpOpen} onClose={() => setHelpOpen(false)} />
+      {letter && (
+        <Sheet open={letterOpen} onClose={() => setLetterOpen(false)} title={t('sos.letterTitle')} closeLabel={t('ui.close')}>
+          <p className="whitespace-pre-wrap text-[16px] leading-relaxed">{letter}</p>
+        </Sheet>
+      )}
     </div>
   )
 }

@@ -46,6 +46,8 @@ export interface Tracker {
   /** Conductas sin abstinencia total: qué cuenta como recaída */
   redLine?: string
   medicalNoticeAck?: boolean
+  /** Carta que el usuario se escribe a sí mismo, para leer en un momento de crisis */
+  crisisLetter?: string
 }
 
 export interface JournalEntry {
