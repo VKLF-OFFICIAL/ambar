@@ -335,6 +335,7 @@ export const es = {
     title: 'Introduce tu PIN',
     subtitle: 'Tu espacio está protegido.',
     unlock: 'Desbloquear',
+    unlocking: 'Descifrando…',
     wrong: 'Ese PIN no es correcto. Inténtalo de nuevo.',
     erase: 'Borrar dígito',
     forgot: 'He olvidado el PIN',

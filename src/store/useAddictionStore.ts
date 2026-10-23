@@ -41,6 +41,8 @@ interface Actions {
   setActiveTracker: (id: string) => void
   resetStreak: (id: string, reflection: Reflection, nowMs?: number) => MessageKey
   addJournalEntry: (e: Omit<JournalEntry, 'id' | 'at'> & { at?: string }) => void
+  /** Encola una entrada creada con la app bloqueada y cifrada; se vuelca al desbloquear. */
+  bufferJournalEntry: (e: Omit<JournalEntry, 'id' | 'at'> & { at?: string }) => void
   deleteJournalEntry: (id: string) => void
   addReason: (trackerId: string, text: string, emoji?: string) => void
   updateReason: (trackerId: string, reasonId: string, patch: Partial<Omit<Reason, 'id'>>) => void
@@ -51,6 +53,8 @@ interface Actions {
   closeDay: (dateKey: string, rating: 1 | 2 | 3 | 4 | 5, note?: string) => void
   updateSettings: (patch: Partial<Settings>) => void
   setPin: (pin: string | null) => Promise<void>
+  /** Descifra y rehidrata al desbloquear, y vuelca lo encolado mientras estuvo bloqueado. */
+  unlockAndRehydrate: () => Promise<void>
   exportData: () => string
   importData: (json: string) => { ok: true } | { ok: false; reason: 'parse' | 'shape' | 'version' }
   wipeAll: () => void
@@ -59,6 +63,9 @@ interface Actions {
 export type AmbarState = Data & Actions
 
 const newId = () => crypto.randomUUID()
+
+// Entradas creadas con la app bloqueada y cifrada (aún sin tracker ni clave): se vuelcan al desbloquear.
+let pendingJournal: Array<Omit<JournalEntry, 'id' | 'at'> & { at?: string }> = []
 
 function defaultSettings(): Settings {
   const lang = typeof navigator !== 'undefined' ? navigator.language : 'es-ES'
@@ -162,6 +169,10 @@ export const useAddictionStore = create<AmbarState>()(
         addJournalEntry: (e) =>
           set((s) => ({ journal: [{ ...e, id: newId(), at: e.at ?? new Date().toISOString() }, ...s.journal] })),
 
+        bufferJournalEntry: (e) => {
+          pendingJournal.push(e)
+        },
+
         deleteJournalEntry: (id) => set((s) => ({ journal: s.journal.filter((e) => e.id !== id) })),
 
         addReason: (trackerId, text, emoji) =>
@@ -211,6 +222,26 @@ export const useAddictionStore = create<AmbarState>()(
           }
         },
 
+        unlockAndRehydrate: async () => {
+          await useAddictionStore.persist.rehydrate()
+          if (pendingJournal.length === 0) return
+          const buffered = pendingJournal
+          pendingJournal = []
+          const active = selectActiveTracker(get())
+          if (!active) return // sin tracker al que asociar; se descarta
+          set((s) => ({
+            journal: [
+              ...buffered.map((e) => ({
+                ...e,
+                id: newId(),
+                trackerId: e.trackerId || active.id,
+                at: e.at ?? new Date().toISOString(),
+              })),
+              ...s.journal,
+            ],
+          }))
+        },
+
         exportData: () => {
           const { trackers, journal, pledges, settings } = get()
           return serialize({ trackers, journal, pledges, settings })
@@ -227,6 +258,7 @@ export const useAddictionStore = create<AmbarState>()(
         wipeAll: () => {
           // Quita el cifrado para que el estado vacío se escriba en claro (y no lo bloquee la guardia).
           disableEncryptionMeta()
+          pendingJournal = []
           set({ ...initialState(), storageAvailable: get().storageAvailable })
         },
       }

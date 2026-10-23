@@ -27,6 +27,7 @@ export function SosIntervention({ locked = false }: { locked?: boolean }) {
   const openRelapse = useUiStore((s) => s.openRelapse)
   const tracker = useAddictionStore(selectActiveTracker)
   const addJournalEntry = useAddictionStore((s) => s.addJournalEntry)
+  const bufferJournalEntry = useAddictionStore((s) => s.bufferJournalEntry)
   const now = useNow(1000)
   const [start] = useState(() => Date.now())
   const [step, setStep] = useState<Step>('breathing')
@@ -69,16 +70,10 @@ export function SosIntervention({ locked = false }: { locked?: boolean }) {
   }
 
   const save = (intensity: number) => {
-    if (!tracker) return
-    addJournalEntry({
-      trackerId: tracker.id,
-      source: 'sos',
-      intensity,
-      emotions: [],
-      environments: [],
-      overcame: true,
-      sosDurationSec: elapsedSec,
-    })
+    const entry = { source: 'sos' as const, intensity, emotions: [], environments: [], overcame: true, sosDurationSec: elapsedSec }
+    if (tracker) addJournalEntry({ ...entry, trackerId: tracker.id })
+    // Cifrado y bloqueado: aún no hay tracker en memoria; se encola y se asocia al desbloquear.
+    else if (locked) bufferJournalEntry({ ...entry, trackerId: '' })
   }
 
   const stepIndex = ORDER.indexOf(step)

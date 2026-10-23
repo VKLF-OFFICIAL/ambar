@@ -337,6 +337,7 @@ export const en: Messages = {
     title: 'Enter your PIN',
     subtitle: 'Your space is protected.',
     unlock: 'Unlock',
+    unlocking: 'Decrypting…',
     wrong: "That PIN isn't right. Please try again.",
     erase: 'Delete digit',
     forgot: 'I forgot my PIN',

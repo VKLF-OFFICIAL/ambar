@@ -27,25 +27,30 @@ export function LockScreen() {
   const [forgotOpen, setForgotOpen] = useState(false)
   const [sure, setSure] = useState(false)
   const [guard, setGuard] = useState(readPinGuard)
+  const [unlocking, setUnlocking] = useState(false)
+  const unlockAndRehydrate = useAddictionStore((s) => s.unlockAndRehydrate)
   const now = useNow(1000)
   const waitSec = Math.max(0, Math.ceil((guard.until - now) / 1000))
 
   const press = (d: string) => {
+    if (unlocking) return
     setError(false)
     setPin((p) => (p.length < MAX ? p + d : p))
   }
 
   const submit = async () => {
-    if (waitSec > 0 || pin.length < 4) return
+    if (unlocking || waitSec > 0 || pin.length < 4) return
     if (!pinHash || (await verifyPin(pin, pinHash))) {
-      // Datos cifrados: deriva la clave del PIN y descífralos antes de entrar.
+      // Datos cifrados: deriva la clave del PIN y descífralos antes de entrar (puede tardar).
       if (pinHash && isEncrypted()) {
+        setUnlocking(true)
         try {
           setSessionKey(await deriveKey(pin, pinHash.split(':')[0] ?? ''))
-          await useAddictionStore.persist.rehydrate()
+          await unlockAndRehydrate()
         } catch {
           // Dato dañado: no entres ni borres nada, el cifrado sigue intacto.
           setSessionKey(null)
+          setUnlocking(false)
           setError(true)
           setPin('')
           return
@@ -68,8 +73,10 @@ export function LockScreen() {
   useEffect(() => {
     if (forgotOpen) return
     const onKey = (e: KeyboardEvent) => {
-      if (/^\d$/.test(e.key)) press(e.key)
-      else if (e.key === 'Backspace') setPin((p) => p.slice(0, -1))
+      if (/^\d$/.test(e.key)) {
+        setError(false)
+        setPin((p) => (p.length < MAX ? p + e.key : p))
+      } else if (e.key === 'Backspace') setPin((p) => p.slice(0, -1))
       else if (e.key === 'Enter') void submitRef.current()
     }
     window.addEventListener('keydown', onKey)
@@ -113,8 +120,8 @@ export function LockScreen() {
         </button>
       </div>
 
-      <Button size="lg" className="mt-8 w-full max-w-xs" disabled={pin.length < 4 || waitSec > 0} onClick={() => void submit()}>
-        {t('lock.unlock')}
+      <Button size="lg" className="mt-8 w-full max-w-xs" disabled={pin.length < 4 || waitSec > 0 || unlocking} onClick={() => void submit()}>
+        {unlocking ? t('lock.unlocking') : t('lock.unlock')}
       </Button>
 
       <div className="mt-auto w-full space-y-1 pt-8">

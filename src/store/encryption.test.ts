@@ -43,6 +43,27 @@ describe('store encryption at rest', () => {
     expect(S().trackers.map((t) => t.id)).toContain(id)
   })
 
+  it('keeps an SOS entry made while locked and attaches it on unlock', async () => {
+    const id = S().addTracker({ kind: 'alcohol' })
+    await S().setPin('1234')
+    await vi.waitFor(() => expect(JSON.parse(localStorage.getItem('ambar-store') ?? '{}').enc).toBe(true))
+
+    // Recarga bloqueada: sin clave ni datos en memoria. El SOS encola una entrada sin tracker.
+    setSessionKey(null)
+    useAddictionStore.setState(initialState(), false)
+    S().bufferJournalEntry({ trackerId: '', source: 'sos', intensity: 7, emotions: [], environments: [], overcame: true, sosDurationSec: 42 })
+
+    // Desbloqueo: descifra y vuelca lo encolado, asociándolo al tracker activo.
+    const pinHash = JSON.parse(localStorage.getItem('ambar-enc') ?? '{}').pinHash as string
+    setSessionKey(await deriveKey('1234', pinHash.split(':')[0] ?? ''))
+    await S().unlockAndRehydrate()
+
+    const entries = S().journal.filter((e) => e.source === 'sos')
+    expect(entries).toHaveLength(1)
+    expect(entries[0]?.intensity).toBe(7)
+    expect(entries[0]?.trackerId).toBe(id)
+  })
+
   it('returns to plain text when the PIN is removed', async () => {
     S().addTracker({ kind: 'tobacco' })
     await S().setPin('1234')
