@@ -7,6 +7,7 @@ import { SUPPORTED_COUNTRIES, currencyFor } from '../data/helplines'
 import { kindInfo } from '../data/trackerKinds'
 import { trackerLabel } from '../lib/labels'
 import { parseImport, type BackupData } from '../lib/backup'
+import { cryptoAvailable } from '../lib/crypto'
 import { downloadBackup } from '../lib/download'
 import type { MessageKey } from '../i18n'
 import type { Tracker } from '../store/types'
@@ -37,13 +38,24 @@ function PinSection() {
   const [editing, setEditing] = useState(false)
   const [value, setValue] = useState('')
   const valid = /^\d{4,6}$/.test(value)
+  const available = cryptoAvailable()
+
+  // Sin WebCrypto no se puede cifrar: no ofrecer activar PIN (salvo quitar uno ya puesto).
+  if (!available && !pinHash) {
+    return (
+      <Card className="space-y-2">
+        <span className="text-[15px]">{t('settings.pinOff')}</span>
+        <p className="text-xs text-subtle">{t('settings.pinUnavailable')}</p>
+      </Card>
+    )
+  }
 
   return (
     <Card className="space-y-3">
       <div className="flex items-center justify-between">
         <span className="text-[15px]">{pinHash ? t('settings.pinOn') : t('settings.pinOff')}</span>
         <div className="flex gap-2">
-          <Button variant="secondary" className="!py-2 text-sm" onClick={() => setEditing((e) => !e)}>
+          <Button variant="secondary" className="!py-2 text-sm" disabled={!available} onClick={() => setEditing((e) => !e)}>
             {pinHash ? t('settings.pinChange') : t('settings.pinSet')}
           </Button>
           {pinHash && (

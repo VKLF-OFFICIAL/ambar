@@ -6,7 +6,7 @@ import { RELAPSE_MESSAGE_KEYS } from '../data/messages'
 import { milestonesUpTo } from '../lib/milestones'
 import { clampToNow, getElapsed } from '../lib/time'
 import { hashPin } from '../lib/pin'
-import { deriveKey, randomSaltHex } from '../lib/crypto'
+import { cryptoAvailable, deriveKey, randomSaltHex } from '../lib/crypto'
 import { exportData as serialize, parseImport, sanitizeData } from '../lib/backup'
 import { createCryptoStorage, disableEncryptionMeta, enableEncryptionMeta, setSessionKey } from '../lib/cryptoStorage'
 
@@ -209,6 +209,8 @@ export const useAddictionStore = create<AmbarState>()(
 
         setPin: async (pin) => {
           if (pin) {
+            // Sin WebCrypto (contexto no seguro) no se puede cifrar: no se activa el PIN.
+            if (!cryptoAvailable()) return
             // Sal única: sirve de verificador (sal:hash) y de semilla para la clave AES.
             const salt = randomSaltHex()
             const pinHash = `${salt}:${await hashPin(pin, salt)}`

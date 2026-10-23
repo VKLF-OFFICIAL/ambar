@@ -64,6 +64,20 @@ describe('store encryption at rest', () => {
     expect(entries[0]?.trackerId).toBe(id)
   })
 
+  it('does not enable the PIN when WebCrypto is unavailable', async () => {
+    const c = globalThis.crypto as unknown as Record<string, unknown>
+    const original = Object.getOwnPropertyDescriptor(c, 'subtle')
+    Object.defineProperty(c, 'subtle', { value: undefined, configurable: true })
+    try {
+      await S().setPin('1234')
+      expect(S().settings.pinHash).toBeUndefined()
+      expect(isEncrypted()).toBe(false)
+    } finally {
+      if (original) Object.defineProperty(c, 'subtle', original)
+      else delete c.subtle
+    }
+  })
+
   it('returns to plain text when the PIN is removed', async () => {
     S().addTracker({ kind: 'tobacco' })
     await S().setPin('1234')

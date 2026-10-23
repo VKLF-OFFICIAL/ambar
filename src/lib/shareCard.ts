@@ -50,8 +50,10 @@ export async function renderShareCard(text: ShareCardText): Promise<Blob> {
   ctx.fillRect(0, 0, size, size)
   ctx.textAlign = 'center'
 
+  // El tamaño del número se reduce si hay muchos dígitos, para que no se desborde.
+  const numSize = text.days.length <= 3 ? 300 : text.days.length === 4 ? 240 : 180
   ctx.fillStyle = '#e8b07a'
-  ctx.font = '600 300px "Fraunces Variable", Georgia, serif'
+  ctx.font = `600 ${numSize}px "Fraunces Variable", Georgia, serif`
   ctx.fillText(text.days, size / 2, size / 2 - 30)
 
   ctx.fillStyle = '#f3ece4'
@@ -89,7 +91,11 @@ export async function shareOrDownload(blob: Blob, filename: string): Promise<'sh
   const a = document.createElement('a')
   a.href = url
   a.download = filename
+  a.rel = 'noopener'
+  // Algunos navegadores (Firefox) exigen que el enlace esté en el DOM para descargar.
+  document.body.appendChild(a)
   a.click()
-  URL.revokeObjectURL(url)
+  a.remove()
+  setTimeout(() => URL.revokeObjectURL(url), 1000)
   return 'downloaded'
 }

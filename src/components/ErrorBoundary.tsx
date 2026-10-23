@@ -38,7 +38,17 @@ export class ErrorBoundary extends Component<{ children: ReactNode }, { failed: 
           ))}
         </div>
         <div className="mt-8 flex flex-col gap-2">
-          <button type="button" className="rounded-2xl bg-surface-2 px-4 py-3" onClick={() => downloadBackup(s.exportData())}>
+          <button
+            type="button"
+            className="rounded-2xl bg-surface-2 px-4 py-3"
+            onClick={() => {
+              try {
+                downloadBackup(s.exportData())
+              } catch {
+                // El salvavidas nunca debe romperse por un fallo al exportar.
+              }
+            }}
+          >
             {t(locale, 'crash.export')}
           </button>
           <button type="button" className="rounded-2xl bg-accent px-4 py-3 font-medium text-on-accent" onClick={() => location.reload()}>

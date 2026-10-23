@@ -72,8 +72,12 @@ async function setItem(name: string, value: string): Promise<void> {
   const meta = readMeta()
   if (meta?.enc && !sessionKey) return // guardia anti-borrado
   if (sessionKey) {
-    const enc = await encryptString(sessionKey, value)
-    raw.setItem(name, JSON.stringify({ enc: true, iv: enc.iv, ct: enc.ct }))
+    try {
+      const enc = await encryptString(sessionKey, value)
+      raw.setItem(name, JSON.stringify({ enc: true, iv: enc.iv, ct: enc.ct }))
+    } catch {
+      // Si el cifrado falla, no se escribe (los datos siguen en memoria); nunca en claro.
+    }
   } else {
     raw.setItem(name, JSON.stringify({ enc: false, state: value }))
   }

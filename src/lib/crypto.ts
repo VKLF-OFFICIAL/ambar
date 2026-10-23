@@ -17,6 +17,11 @@ function fromB64(b64: string): Uint8Array<ArrayBuffer> {
   return out
 }
 
+/** ¿Está disponible WebCrypto? (falta en contextos no seguros: HTTP que no sea localhost). */
+export function cryptoAvailable(): boolean {
+  return typeof crypto !== 'undefined' && typeof crypto.subtle !== 'undefined'
+}
+
 /** Sal aleatoria de 16 bytes en hex (32 caracteres). */
 export function randomSaltHex(): string {
   return [...crypto.getRandomValues(new Uint8Array(16))].map((b) => b.toString(16).padStart(2, '0')).join('')
