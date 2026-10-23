@@ -1,4 +1,4 @@
-import type { JournalEntry, Pledge, Settings, Tracker } from '../store/types'
+import type { Helpline, JournalEntry, Pledge, Settings, Tracker } from '../store/types'
 import { TRACKER_KINDS } from '../data/trackerKinds'
 import { clampToNow } from './time'
 
@@ -25,7 +25,7 @@ const optStr = (v: unknown) => v === undefined || isStr(v)
 const KINDS = new Set<string>(TRACKER_KINDS.map((k) => k.kind))
 const PIN_HASH = /^[0-9a-f]{32}:[0-9a-f]{64}$/
 
-function isTracker(v: unknown): v is Tracker {
+export function isTracker(v: unknown): v is Tracker {
   return (
     isObj(v) &&
     isStr(v.id) &&
@@ -44,7 +44,7 @@ function isTracker(v: unknown): v is Tracker {
   )
 }
 
-function isEntry(v: unknown): v is JournalEntry {
+export function isEntry(v: unknown): v is JournalEntry {
   return (
     isObj(v) &&
     isStr(v.id) &&
@@ -57,11 +57,11 @@ function isEntry(v: unknown): v is JournalEntry {
   )
 }
 
-function isPledge(v: unknown): v is Pledge {
+export function isPledge(v: unknown): v is Pledge {
   return isObj(v) && isStr(v.date)
 }
 
-function isSettings(v: unknown): v is Settings {
+export function isSettings(v: unknown): v is Settings {
   return (
     isObj(v) &&
     (v.theme === 'dark' || v.theme === 'light') &&
@@ -105,4 +105,52 @@ export function parseImport(json: string): ImportResult {
     data: { trackers, journal: d.journal, pledges: d.pledges, settings: d.settings },
     exportedAt: isStr(parsed.exportedAt) ? parsed.exportedAt : undefined,
   }
+}
+
+/**
+ * Valida un objeto `settings` campo a campo: conserva los campos válidos y descarta
+ * solo los corruptos, para que datos antiguos (a los que les falte algún campo nuevo)
+ * sigan sirviendo y se completen después con los valores por defecto.
+ */
+export function sanitizeSettings(raw: unknown): Partial<Settings> {
+  if (!isObj(raw)) return {}
+  const s: Partial<Settings> = {}
+  if (raw.theme === 'dark' || raw.theme === 'light') s.theme = raw.theme
+  if (raw.locale === 'es' || raw.locale === 'en') s.locale = raw.locale
+  if (isStr(raw.country)) s.country = raw.country
+  if (isStr(raw.currency)) s.currency = raw.currency
+  if (typeof raw.reduceMotion === 'boolean') s.reduceMotion = raw.reduceMotion
+  if (typeof raw.onboarded === 'boolean') s.onboarded = raw.onboarded
+  if (isStr(raw.pinHash) && PIN_HASH.test(raw.pinHash)) s.pinHash = raw.pinHash
+  if (isStr(raw.name)) s.name = raw.name
+  if (isStr(raw.activeTrackerId)) s.activeTrackerId = raw.activeTrackerId
+  if (Array.isArray(raw.customHelplines) && raw.customHelplines.every((h) => isObj(h) && isStr(h.label) && isStr(h.phone))) {
+    s.customHelplines = raw.customHelplines as Helpline[]
+  }
+  return s
+}
+
+/**
+ * Valida datos ya persistidos (localStorage), tolerando corrupción: conserva los
+ * registros válidos y descarta solo los que no lo son, para que un almacenamiento
+ * dañado o de una versión futura no rompa la app ni cargue basura en memoria.
+ * Devuelve solo las claves cuyo valor se pudo recuperar.
+ */
+export type SanitizedData = {
+  trackers?: Tracker[]
+  journal?: JournalEntry[]
+  pledges?: Pledge[]
+  settings?: Partial<Settings>
+}
+
+export function sanitizeData(raw: unknown): SanitizedData {
+  const o = isObj(raw) ? raw : {}
+  const out: SanitizedData = {}
+  if (Array.isArray(o.trackers)) {
+    out.trackers = o.trackers.filter(isTracker).map((t) => ({ ...t, startDate: clampToNow(t.startDate) }))
+  }
+  if (Array.isArray(o.journal)) out.journal = o.journal.filter(isEntry)
+  if (Array.isArray(o.pledges)) out.pledges = o.pledges.filter(isPledge)
+  if (isObj(o.settings)) out.settings = sanitizeSettings(o.settings)
+  return out
 }

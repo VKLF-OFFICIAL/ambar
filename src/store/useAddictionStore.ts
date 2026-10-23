@@ -5,9 +5,10 @@ import type { MessageKey } from '../i18n'
 import { RELAPSE_MESSAGE_KEYS } from '../data/messages'
 import { milestonesUpTo } from '../lib/milestones'
 import { clampToNow, getElapsed } from '../lib/time'
-import { createPinHash } from '../lib/pin'
-import { exportData as serialize, parseImport } from '../lib/backup'
-import { createSafeStorage } from '../lib/storage'
+import { hashPin } from '../lib/pin'
+import { deriveKey, randomSaltHex } from '../lib/crypto'
+import { exportData as serialize, parseImport, sanitizeData } from '../lib/backup'
+import { createCryptoStorage, disableEncryptionMeta, enableEncryptionMeta, setSessionKey } from '../lib/cryptoStorage'
 
 export interface NewTrackerInput {
   kind: TrackerKind
@@ -196,8 +197,18 @@ export const useAddictionStore = create<AmbarState>()(
         updateSettings: (patch) => set((s) => ({ settings: { ...s.settings, ...patch } })),
 
         setPin: async (pin) => {
-          const pinHash = pin ? await createPinHash(pin) : undefined
-          set((s) => ({ settings: { ...s.settings, pinHash } }))
+          if (pin) {
+            // Sal única: sirve de verificador (sal:hash) y de semilla para la clave AES.
+            const salt = randomSaltHex()
+            const pinHash = `${salt}:${await hashPin(pin, salt)}`
+            const key = await deriveKey(pin, salt)
+            setSessionKey(key)
+            enableEncryptionMeta(pinHash)
+            set((s) => ({ settings: { ...s.settings, pinHash } })) // provoca el guardado cifrado
+          } else {
+            disableEncryptionMeta()
+            set((s) => ({ settings: { ...s.settings, pinHash: undefined } })) // vuelve a texto plano
+          }
         },
 
         exportData: () => {
@@ -213,16 +224,21 @@ export const useAddictionStore = create<AmbarState>()(
           return { ok: true }
         },
 
-        wipeAll: () => set({ ...initialState(), storageAvailable: get().storageAvailable }),
+        wipeAll: () => {
+          // Quita el cifrado para que el estado vacío se escriba en claro (y no lo bloquee la guardia).
+          disableEncryptionMeta()
+          set({ ...initialState(), storageAvailable: get().storageAvailable })
+        },
       }
     },
     {
       name: 'ambar-store',
       version: 1,
-      migrate: (persisted) => persisted as AmbarState,
+      // Valida al migrar en lugar de confiar a ciegas; `merge` vuelve a sanear en cada carga.
+      migrate: (persisted) => sanitizeData(persisted) as AmbarState,
       merge: mergePersisted,
       storage: createJSONStorage(() =>
-        createSafeStorage(() => {
+        createCryptoStorage(() => {
           queueMicrotask(() => useAddictionStore.setState({ storageAvailable: false }))
         }),
       ),
@@ -235,8 +251,18 @@ export function selectActiveTracker(s: AmbarState): Tracker | undefined {
   return s.trackers.find((t) => t.id === s.settings.activeTrackerId) ?? s.trackers[0]
 }
 
-/** Mezcla lo guardado con el estado actual; los ajustes se completan con los valores por defecto. */
+/**
+ * Mezcla lo guardado con el estado actual saneando los datos: los registros corruptos
+ * se descartan y lo que falte o no sea válido cae a los valores por defecto, de modo que
+ * un `localStorage` dañado nunca rompe la app ni carga datos inválidos en memoria.
+ */
 export function mergePersisted(persisted: unknown, current: AmbarState): AmbarState {
-  const p = (persisted && typeof persisted === 'object' ? persisted : {}) as Partial<AmbarState>
-  return { ...current, ...p, settings: { ...current.settings, ...(p.settings ?? {}) } }
+  const clean = sanitizeData(persisted)
+  return {
+    ...current,
+    trackers: clean.trackers ?? current.trackers,
+    journal: clean.journal ?? current.journal,
+    pledges: clean.pledges ?? current.pledges,
+    settings: { ...current.settings, ...(clean.settings ?? {}) },
+  }
 }

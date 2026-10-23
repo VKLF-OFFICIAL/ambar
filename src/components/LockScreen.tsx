@@ -4,6 +4,8 @@ import { useT } from '../hooks/useT'
 import { useAddictionStore } from '../store/useAddictionStore'
 import { useUiStore } from '../store/useUiStore'
 import { verifyPin } from '../lib/pin'
+import { deriveKey } from '../lib/crypto'
+import { isEncrypted, metaPinHash, setSessionKey } from '../lib/cryptoStorage'
 import { readPinGuard, recordPinFailure, resetPinGuard } from '../lib/pinGuard'
 import { useNow } from '../hooks/useNow'
 import { Button } from './ui/Button'
@@ -14,7 +16,9 @@ const MAX = 6
 
 export function LockScreen() {
   const { t } = useT()
-  const pinHash = useAddictionStore((s) => s.settings.pinHash)
+  const settingsPinHash = useAddictionStore((s) => s.settings.pinHash)
+  // Con datos cifrados y bloqueados, settings aún no está en memoria: el verificador vive en los metadatos.
+  const pinHash = settingsPinHash ?? metaPinHash()
   const wipeAll = useAddictionStore((s) => s.wipeAll)
   const unlock = useUiStore((s) => s.unlock)
   const openSos = useUiStore((s) => s.openSos)
@@ -34,6 +38,19 @@ export function LockScreen() {
   const submit = async () => {
     if (waitSec > 0 || pin.length < 4) return
     if (!pinHash || (await verifyPin(pin, pinHash))) {
+      // Datos cifrados: deriva la clave del PIN y descífralos antes de entrar.
+      if (pinHash && isEncrypted()) {
+        try {
+          setSessionKey(await deriveKey(pin, pinHash.split(':')[0] ?? ''))
+          await useAddictionStore.persist.rehydrate()
+        } catch {
+          // Dato dañado: no entres ni borres nada, el cifrado sigue intacto.
+          setSessionKey(null)
+          setError(true)
+          setPin('')
+          return
+        }
+      }
       resetPinGuard()
       unlock()
       return
