@@ -45,4 +45,6 @@ npm run preview   # sirve dist/ localmente
 
 ## Licencia
 
-MIT. Ver [LICENSE](LICENSE).
+**PolyForm Noncommercial 1.0.0** — ver [LICENSE](LICENSE).
+
+Ambar es software de uso **no comercial**: cualquiera puede usarlo, estudiarlo, modificarlo y redistribuirlo libremente, pero **nadie puede venderlo ni monetizarlo**, y esa condición **se mantiene también en cualquier mejora o versión derivada**. No se permite ningún uso con fin comercial.
