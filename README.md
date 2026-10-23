@@ -42,3 +42,7 @@ npm run preview   # sirve dist/ localmente
 - Registrar dominio y marca.
 
 > Ambar es una herramienta de autoayuda y no sustituye la atención de un profesional sanitario.
+
+## Licencia
+
+MIT. Ver [LICENSE](LICENSE).

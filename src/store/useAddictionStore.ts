@@ -6,7 +6,7 @@ import { RELAPSE_MESSAGE_KEYS } from '../data/messages'
 import { milestonesUpTo } from '../lib/milestones'
 import { clampToNow, getElapsed } from '../lib/time'
 import { createPinHash } from '../lib/pin'
-import { exportData as serialize, parseImport } from '../lib/backup'
+import { exportData as serialize, parseImport, sanitizeData } from '../lib/backup'
 import { createSafeStorage } from '../lib/storage'
 
 export interface NewTrackerInput {
@@ -219,7 +219,8 @@ export const useAddictionStore = create<AmbarState>()(
     {
       name: 'ambar-store',
       version: 1,
-      migrate: (persisted) => persisted as AmbarState,
+      // Valida al migrar en lugar de confiar a ciegas; `merge` vuelve a sanear en cada carga.
+      migrate: (persisted) => sanitizeData(persisted) as AmbarState,
       merge: mergePersisted,
       storage: createJSONStorage(() =>
         createSafeStorage(() => {
@@ -235,8 +236,18 @@ export function selectActiveTracker(s: AmbarState): Tracker | undefined {
   return s.trackers.find((t) => t.id === s.settings.activeTrackerId) ?? s.trackers[0]
 }
 
-/** Mezcla lo guardado con el estado actual; los ajustes se completan con los valores por defecto. */
+/**
+ * Mezcla lo guardado con el estado actual saneando los datos: los registros corruptos
+ * se descartan y lo que falte o no sea válido cae a los valores por defecto, de modo que
+ * un `localStorage` dañado nunca rompe la app ni carga datos inválidos en memoria.
+ */
 export function mergePersisted(persisted: unknown, current: AmbarState): AmbarState {
-  const p = (persisted && typeof persisted === 'object' ? persisted : {}) as Partial<AmbarState>
-  return { ...current, ...p, settings: { ...current.settings, ...(p.settings ?? {}) } }
+  const clean = sanitizeData(persisted)
+  return {
+    ...current,
+    trackers: clean.trackers ?? current.trackers,
+    journal: clean.journal ?? current.journal,
+    pledges: clean.pledges ?? current.pledges,
+    settings: { ...current.settings, ...(clean.settings ?? {}) },
+  }
 }
